@@ -4,6 +4,7 @@ const {CleanWebpackPlugin} = require('clean-webpack-plugin')
 const CopyWebpackPlugin = require('copy-webpack-plugin')
 const OptimizeCssAssetWebpackPlugin = require('optimize-css-assets-webpack-plugin')
 const TerserWebpackPlugin = require('terser-webpack-plugin')
+const {BundleAnalyzerPlugin} = require('webpack-bundle-analyzer')
 
 const isDev = process.env.NODE_ENV === 'development'
 const isProd = !isDev
@@ -24,13 +25,38 @@ const optimization = () => {
   
     return config
   }
+  const plugins = () => {
+    const base = [
+      new HTMLWebpackPlugin({
+        template: './index.html',
+        minify: {
+          collapseWhitespace: isProd
+        }
+      }),
+      new CleanWebpackPlugin(),
+      new CopyWebpackPlugin({
+        patterns: [
+          {
+            from: path.resolve(__dirname, 'src/favicon.ico'),
+            to: path.resolve(__dirname, 'dist')
+          }
+        ]
+      }),
+    ]
+  
+    if (isProd) {
+      base.push(new BundleAnalyzerPlugin())
+    }
+  
+    return base
+  }
 
 module.exports = {
     context: path.resolve(__dirname, 'src'),
     mode: 'development',
     entry: {
-        main: ['@babel/polyfill', './index.js'],
-        analytics: './analytics.js'
+        main: ['@babel/polyfill', './index.jsx'],
+        analytics: './analytics.ts'
     },
     output: {
         filename: '[name].[contenthash].js',
@@ -48,23 +74,8 @@ module.exports = {
         port: 4200,
         hot: isDev
     },
-    plugins: [
-        new HTMLWebpackPlugin({
-            template: './index.html',
-            minify: {
-                collapseWhitespace: isProd
-            }
-        }),
-        new CleanWebpackPlugin(),
-        new CopyWebpackPlugin({
-            patterns: [
-              {
-                from: path.resolve(__dirname, 'src/favicon.ico'),
-                to: path.resolve(__dirname, 'dist')
-              }
-            ]
-          }),
-    ],
+    //devtool: isDev ? 'source-map' : '',
+    plugins: plugins(),
     module: {
         rules: [
             {
@@ -102,7 +113,17 @@ module.exports = {
                     presets: ['@babel/preset-env']
                   }
                 }
-              }
+              },
+              {
+                test: /\.ts$/,
+                exclude: /node_modules/,
+                use: {
+                  loader: "babel-loader",
+                  options: {
+                    presets: ['@babel/preset-typescript']
+                  }
+                }
+              },
         ]
     }
 }
